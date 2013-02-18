@@ -31,7 +31,7 @@
   (lambda (op . args)
     (let ((type-tags (map type-tag args)))
       (let ((proc (get op type-tags)))
-        (if proc
+        (if (not (void? proc))
             (apply proc (map contents args))
             (error
              "No method for these types -- APPLY-GENERIC"
@@ -45,6 +45,7 @@
 (define sub (lambda (x y) (apply-generic 'sub x y)))
 (define mul (lambda (x y) (apply-generic 'mul x y)))
 (define div (lambda (x y) (apply-generic 'div x y)))
+(define square (lambda (x) (apply-generic 'square x)))
 
 (define install-scheme-number-package
   (lambda ()
@@ -61,6 +62,8 @@
          (lambda (x y) (tag (/ x y))))
     (put 'make 'scheme-number
          (lambda (x) (tag x)))
+    (put 'square '(scheme-number)
+         (lambda (x) (tag (* x x))))
     (display "Scheme number package installed\n")))
 
 (define make-scheme-number
@@ -100,7 +103,9 @@
       (lambda (x y)
         (make-rat (* (numer x) (denom y))
                   (* (denom x) (numer y)))))
-    
+    (define square-rat
+      (lambda (x)
+        (mul-rat x x)))
     ;; interface to rest of the system
     (define tag 
       (lambda (x)
@@ -114,7 +119,8 @@
          (lambda (x y) (tag (mul-rat x y))))
     (put 'div '(rational rational)
          (lambda (x y) (tag (div-rat x y))))
-    
+    (put 'square '(rational)
+         (lambda (x) (tag (square-rat x))))
     (put 'make 'rational
          (lambda (n d) (tag (make-rat n d))))
     (display "Rational number package installed\n")))
@@ -136,6 +142,7 @@
         (define real-part (lambda (z) (car z)))
         (define imag-part (lambda (z) (cdr z)))
         (define make-from-real-imag (lambda (x y) (cons x y)))
+        
         (define magnitude 
           (lambda (z)
             (sqrt (+ (square (real-part z))
@@ -146,19 +153,19 @@
         (define make-from-mag-ang
           (lambda (r a) 
             (cons (* r (cos a)) (* r (sin a)))))
-        
+
         ;; interface to the rest of the system
         (define tag (lambda (x) (attach-tag 'rectangular x)))
         
         (put 'real-part '(rectangular) real-part)
         (put 'imag-part '(rectangular) imag-part)
         (put 'magnitude '(rectangular) magnitude)
+        (put 'square    '(rectangular) square)
         (put 'angle '(rectangular) angle)
         (put 'make-from-real-imag 'rectangular
              (lambda (x y) (tag (make-from-real-imag x y))))
         (put 'make-from-mag-ang 'rectangular
              (lambda (r a) (tag (make-from-mag-ang r a))))))
-      
       (define install-polar-package
         (lambda ()
           ;; internal procedures for polar
@@ -239,6 +246,8 @@
          (lambda (x y) (tag (make-from-real-imag x y))))
     (put 'make-from-mag-ang 'complex
          (lambda (r a) (tag (make-from-mag-ang r a))))
+    (put 'square '(complex)
+         (lambda (x)   (tag (mul-complex x x))))
     
     ;; need to install both packages if you want them to work
     (install-rectangular-package)
